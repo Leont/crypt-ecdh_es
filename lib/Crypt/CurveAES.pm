@@ -5,7 +5,6 @@ use warnings;
 
 use Carp;
 use Crypt::Curve25519;
-use Crypt::CBC;
 use Crypt::Rijndael;
 
 use Exporter 5.57 'import';
@@ -34,15 +33,15 @@ sub curveaes_encrypt {
 	my $public  = curve25519_public_key($private);
 	my $shared  = curve25519_shared_secret($private, $key);
 
-	my $iv      = _csprng(16);
-	my $cipher = Crypt::CBC->new(
-		-key         => $shared,
-		-literal_key => 1,
-		-cipher      => 'Rijndael',
-		-header      => 'none',
-		-iv          => $iv,
-	);
-	return pack $format, 1, 0, $public, $iv, $cipher->encrypt($data), '';
+	my $cipher = Crypt::Rijndael->new($shared, Crypt::Rijndael::MODE_CBC);
+	my $iv     = _csprng(16);
+	$cipher->set_iv($iv);
+
+	my $pad_length = 16 - length($data) % 16;
+	my $padding =  pack "C*", ($pad_length) x $pad_length;
+
+	my $ciphertext = $cipher->encrypt($data . $padding);
+	return pack $format, 1, 0, $public, $iv, $ciphertext;
 }
 
 sub curveaes_decrypt {
@@ -51,14 +50,14 @@ sub curveaes_decrypt {
 	my ($major, $minor, $public, $iv, $ciphertext) = unpack $format, $data;
 	croak 'Unknown format version for ciphertext' if $major != 1;
 
-	my $cipher = Crypt::CBC->new(
-		-key         => curve25519_shared_secret($key, $public),
-		-literal_key => 1,
-		-cipher      => 'Rijndael',
-		-header      => 'none',
-		-iv          => $iv,
-	);
-	return $cipher->decrypt($ciphertext);
+	my $shared = curve25519_shared_secret($key, $public);
+	my $cipher = Crypt::Rijndael->new($shared, Crypt::Rijndael::MODE_CBC);
+	$cipher->set_iv($iv);
+
+	my $plaintext = $cipher->decrypt($ciphertext);
+	my $padding_length = ord substr $plaintext, -1;
+	substr $plaintext, -$padding_length, $padding_length, '';
+	return $plaintext;
 }
 
 sub curveaes_generate_key {

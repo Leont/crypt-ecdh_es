@@ -6,6 +6,7 @@ use warnings;
 use Carp;
 use Crypt::Curve25519;
 use Crypt::Rijndael;
+use Digest::SHA 'sha256';
 
 use Exporter 5.57 'import';
 our @EXPORT_OK = qw/curveaes_encrypt curveaes_decrypt curveaes_generate_key/;
@@ -33,7 +34,7 @@ sub curveaes_encrypt {
 	my $public  = curve25519_public_key($private);
 	my $shared  = curve25519_shared_secret($private, $key);
 
-	my $cipher = Crypt::Rijndael->new($shared, Crypt::Rijndael::MODE_CBC);
+	my $cipher = Crypt::Rijndael->new(sha256($shared), Crypt::Rijndael::MODE_CBC);
 	my $iv     = _csprng(16);
 	$cipher->set_iv($iv);
 
@@ -51,7 +52,7 @@ sub curveaes_decrypt {
 	croak 'Unknown format version for ciphertext' if $major != 1;
 
 	my $shared = curve25519_shared_secret($key, $public);
-	my $cipher = Crypt::Rijndael->new($shared, Crypt::Rijndael::MODE_CBC);
+	my $cipher = Crypt::Rijndael->new(sha256($shared), Crypt::Rijndael::MODE_CBC);
 	$cipher->set_iv($iv);
 
 	my $plaintext = $cipher->decrypt($ciphertext);

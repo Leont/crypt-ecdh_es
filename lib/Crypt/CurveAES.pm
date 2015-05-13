@@ -48,8 +48,8 @@ sub curveaes_encrypt {
 sub curveaes_decrypt {
 	my ($key, $data) = @_;
 
-	my ($major_version, $minor_version, $public, $iv, $ciphertext, $header) = unpack $format, $data;
-	croak 'Unknown format version for ciphertext' if $major_version != 1;
+	my ($major, $minor, $public, $iv, $ciphertext) = unpack $format, $data;
+	croak 'Unknown format version for ciphertext' if $major != 1;
 
 	my $cipher = Crypt::CBC->new(
 		-key         => curve25519_shared_secret($key, $public),

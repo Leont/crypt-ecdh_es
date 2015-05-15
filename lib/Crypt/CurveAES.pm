@@ -6,7 +6,7 @@ use warnings;
 use Carp;
 use Crypt::Curve25519;
 use Crypt::Rijndael;
-use Digest::SHA 'sha256';
+use Digest::SHA qw/sha256 hmac_sha256/;
 
 use Exporter 5.57 'import';
 our @EXPORT_OK = qw/curveaes_encrypt curveaes_decrypt curveaes_generate_key/;
@@ -25,35 +25,49 @@ our %EXPORT_TAGS = (all => \@EXPORT_OK);
 	}
 };
 
-my $format = 'C2 a32 a16 w/a';
+my $format = 'C2 a32 a32 a*';
+
+sub _keys_from {
+	my $shared = shift;
+	return unpack "A16 A16", sha256($shared);
+}
+
+sub _cipher_for {
+	my ($key, $public) = @_;
+	my $cipher = Crypt::Rijndael->new($key, Crypt::Rijndael::MODE_CBC);
+	my $iv     = substr sha256($public), 8, 16;
+	$cipher->set_iv($iv);
+	return $cipher;
+}
 
 sub curveaes_encrypt {
-	my ($key, $data) = @_;
+	my ($public_key, $data) = @_;
 
 	my $private = curve25519_secret_key(_csprng(32));
 	my $public  = curve25519_public_key($private);
-	my $shared  = curve25519_shared_secret($private, $key);
+	my $shared  = curve25519_shared_secret($private, $public_key);
 
-	my $cipher = Crypt::Rijndael->new(sha256($shared), Crypt::Rijndael::MODE_CBC);
-	my $iv     = _csprng(16);
-	$cipher->set_iv($iv);
+	my ($encrypt_key, $sign_key) = _keys_from($shared);
+	my $cipher = _cipher_for($encrypt_key, $public);
 
 	my $pad_length = 16 - length($data) % 16;
-	my $padding =  pack "C*", ($pad_length) x $pad_length;
+	my $padding = pack 'C*', ($pad_length) x $pad_length;
 
 	my $ciphertext = $cipher->encrypt($data . $padding);
-	return pack $format, 1, 0, $public, $iv, $ciphertext;
+	my $mac = hmac_sha256($ciphertext, $sign_key);
+	return pack $format, 1, 0, $public, $mac, $ciphertext;
 }
 
 sub curveaes_decrypt {
-	my ($key, $data) = @_;
+	my ($private_key, $packed_data) = @_;
 
-	my ($major, $minor, $public, $iv, $ciphertext) = unpack $format, $data;
-	croak 'Unknown format version for ciphertext' if $major != 1;
+	my ($major, undef, $public, $mac, $ciphertext) = unpack $format, $packed_data;
+	croak 'Unknown format version' if $major != 1;
 
-	my $shared = curve25519_shared_secret($key, $public);
-	my $cipher = Crypt::Rijndael->new(sha256($shared), Crypt::Rijndael::MODE_CBC);
-	$cipher->set_iv($iv);
+	my $shared = curve25519_shared_secret($private_key, $public);
+	my ($encrypt_key, $sign_key) = _keys_from($shared);
+	croak 'MAC is incorrect' if hmac_sha256($ciphertext, $sign_key) ne $mac;
+	my $cipher = _cipher_for($encrypt_key, $public);
 
 	my $plaintext = $cipher->decrypt($ciphertext);
 	my $padding_length = ord substr $plaintext, -1;
@@ -95,7 +109,7 @@ This distribution comes with no warranties whatsoever. While the author believes
 
 This modules uses Daniel J. Bernstein's Curve25519 to perform a Diffie-Hellman key agreement between an encoder and a decoder. The keys of the decoder should be known in advance (as this system works as a one-way communication mechanism), for the encoder a new keypair is generated for every encryption using a cryptographically secure pseudo-random number generator based on AES in CTR mode. The shared key resulting from the key agreement is used to encrypt the plaintext using AES (or another cipher if you ask for it) in CBC mode.
 
-This module does not provide any authentication, if you require this you either want to add an MAC or a signature.
+This module also adds a HMAC, with the key derived from the same the same shared secret.
 
 =func curveaes_encrypt($public_key, $plaintext)
 

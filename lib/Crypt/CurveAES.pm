@@ -27,19 +27,6 @@ our %EXPORT_TAGS = (all => \@EXPORT_OK);
 
 my $format = 'C2 a32 a32 a*';
 
-sub _keys_from {
-	my $shared = shift;
-	return unpack "A16 A16", sha256($shared);
-}
-
-sub _cipher_for {
-	my ($key, $public) = @_;
-	my $cipher = Crypt::Rijndael->new($key, Crypt::Rijndael::MODE_CBC);
-	my $iv     = substr sha256($public), 8, 16;
-	$cipher->set_iv($iv);
-	return $cipher;
-}
-
 sub curveaes_encrypt {
 	my ($public_key, $data) = @_;
 
@@ -47,14 +34,16 @@ sub curveaes_encrypt {
 	my $public  = curve25519_public_key($private);
 	my $shared  = curve25519_shared_secret($private, $public_key);
 
-	my ($encrypt_key, $sign_key) = _keys_from($shared);
-	my $cipher = _cipher_for($encrypt_key, $public);
+	my ($encrypt_key, $sign_key) = unpack 'A16 A16', sha256($shared);
+	my $iv     = substr sha256($public), 8, 16;
+	my $cipher = Crypt::Rijndael->new($encrypt_key, Crypt::Rijndael::MODE_CBC);
+	$cipher->set_iv($iv);
 
 	my $pad_length = 16 - length($data) % 16;
 	my $padding = pack 'C*', ($pad_length) x $pad_length;
 
 	my $ciphertext = $cipher->encrypt($data . $padding);
-	my $mac = hmac_sha256($ciphertext, $sign_key);
+	my $mac = hmac_sha256($iv . $ciphertext, $sign_key);
 	return pack $format, 1, 0, $public, $mac, $ciphertext;
 }
 
@@ -65,9 +54,11 @@ sub curveaes_decrypt {
 	croak 'Unknown format version' if $major != 1;
 
 	my $shared = curve25519_shared_secret($private_key, $public);
-	my ($encrypt_key, $sign_key) = _keys_from($shared);
-	croak 'MAC is incorrect' if hmac_sha256($ciphertext, $sign_key) ne $mac;
-	my $cipher = _cipher_for($encrypt_key, $public);
+	my ($encrypt_key, $sign_key) = unpack 'A16 A16', sha256($shared);
+	my $iv     = substr sha256($public), 8, 16;
+	croak 'MAC is incorrect' if hmac_sha256($iv . $ciphertext, $sign_key) ne $mac;
+	my $cipher = Crypt::Rijndael->new($encrypt_key, Crypt::Rijndael::MODE_CBC);
+	$cipher->set_iv($iv);
 
 	my $plaintext = $cipher->decrypt($ciphertext);
 	my $padding_length = ord substr $plaintext, -1;

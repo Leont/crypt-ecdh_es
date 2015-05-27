@@ -4,4 +4,4 @@
 *.swo
 *.tdy
 *.tar.gz
-Crypt-CurveAES-*
+Crypt-ECDH_ES-*

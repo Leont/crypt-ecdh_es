@@ -5,13 +5,13 @@ use warnings;
 
 use Test::More;
 
-use Crypt::CurveAES ':all';
+use Crypt::ECDH_ES ':all';
 
 my $original = 'Blabla';
 
-my $ciphertext = curveaes_encrypt(pack('H*', '87558542bbbfff0f93902ffa8434b44235daa830ccffb1a6b5300b3cda701d05'), $original);
+my $ciphertext = ecdhes_encrypt(pack('H*', '87558542bbbfff0f93902ffa8434b44235daa830ccffb1a6b5300b3cda701d05'), $original);
 
-my $plaintext = curveaes_decrypt(pack('Cx31', 42), $ciphertext);
+my $plaintext = ecdhes_decrypt(pack('Cx31', 42), $ciphertext);
 
 is($plaintext, $original, 'decrypted ciphertext is identical to original');
 

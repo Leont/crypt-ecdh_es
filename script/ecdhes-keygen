@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Crypt::CurveAES 'curveaes_generate_key';
+use Crypt::ECDH_ES 'ecdhes_generate_key';
 use Getopt::Long;
 use MIME::Base64;
 
@@ -25,17 +25,17 @@ my %formatter_for = (
 my $formatter = $formatter_for{ $opts{format} };
 die "Unknown format $opts{format}" if not $formatter;
 
-my ($private, $public) = curveaes_generate_key();
+my ($private, $public) = ecdhes_generate_key();
 #my ($private, $public) = map { pack "Cx31", $_ } 42, 123;
 
 print $formatter->($private, $public);
 
-#PODNAME: curveaes-keygen
-#ABSTRACT: A tool for generating CurveAES keys
+#PODNAME: ecdhes-keygen
+#ABSTRACT: A tool for generating ecdhes keys
 
 =head1 SYNOPSIS
 
- $ curveaes-keygen --base64
+ $ ecdhes-keygen --base64
  CBP5t6A9pNczbr5NayeR4qURo12IUtXHy9CwNy/oFkQ=
  TDZkh2OblpB5f68XFryY7GFpR1YDyF9SFLBpdCxrrFE=
 

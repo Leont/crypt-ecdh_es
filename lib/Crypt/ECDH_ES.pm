@@ -1,4 +1,4 @@
-package Crypt::CurveAES;
+package Crypt::ECDH_ES;
 
 use strict;
 use warnings;
@@ -9,7 +9,7 @@ use Crypt::Rijndael;
 use Digest::SHA qw/sha256 hmac_sha256/;
 
 use Exporter 5.57 'import';
-our @EXPORT_OK = qw/curveaes_encrypt curveaes_decrypt curveaes_generate_key/;
+our @EXPORT_OK = qw/ecdhes_encrypt ecdhes_decrypt ecdhes_generate_key/;
 our %EXPORT_TAGS = (all => \@EXPORT_OK);
 
 {
@@ -27,7 +27,7 @@ our %EXPORT_TAGS = (all => \@EXPORT_OK);
 
 my $format = 'C2 a32 a32 a*';
 
-sub curveaes_encrypt {
+sub ecdhes_encrypt {
 	my ($public_key, $data) = @_;
 
 	my $private = curve25519_secret_key(_csprng(32));
@@ -47,7 +47,7 @@ sub curveaes_encrypt {
 	return pack $format, 1, 0, $public, $mac, $ciphertext;
 }
 
-sub curveaes_decrypt {
+sub ecdhes_decrypt {
 	my ($private_key, $packed_data) = @_;
 
 	my ($major, undef, $public, $mac, $ciphertext) = unpack $format, $packed_data;
@@ -66,7 +66,7 @@ sub curveaes_decrypt {
 	return $plaintext;
 }
 
-sub curveaes_generate_key {
+sub ecdhes_generate_key {
 	open my $fh, '<:raw', '/dev/random' or croak "Couldn't open /dev/random: $!";
 	read $fh, my $buf, 32 or croak "Can't read from /dev/random: $!";
 	close $fh;
@@ -81,12 +81,12 @@ sub curveaes_generate_key {
 
 =head1 SYNOPSIS
 
- my $ciphertext = curveaes_encrypt($data, $key);
- my $plaintext = curveaes_decrypt($ciphertext, $key);
+ my $ciphertext = ecdhes_encrypt($data, $key);
+ my $plaintext = ecdhes_decrypt($ciphertext, $key);
 
 =head1 DESCRIPTION
 
-This module uses elliptic curve cryptography combined with the AES-256 cipher to achieve an hybrid cryptographical system. Both the public and the private key are simply 32 byte blobs.
+This module uses elliptic curve cryptography in an ephemerical-static configuration combined with the AES cipher to achieve an hybrid cryptographical system. Both the public and the private key are simply 32 byte blobs.
 
 =head2 Use-cases
 
@@ -98,19 +98,19 @@ This distribution comes with no warranties whatsoever. While the author believes
 
 =head2 TECHNICAL DETAILS
 
-This modules uses Daniel J. Bernstein's Curve25519 to perform a Diffie-Hellman key agreement between an encoder and a decoder. The keys of the decoder should be known in advance (as this system works as a one-way communication mechanism), for the encoder a new keypair is generated for every encryption using a cryptographically secure pseudo-random number generator based on AES in CTR mode. The shared key resulting from the key agreement is used to encrypt the plaintext using AES (or another cipher if you ask for it) in CBC mode.
+This modules uses Daniel J. Bernstein's curve25519 (also used by OpenSSH) to perform a Diffie-Hellman key agreement between an encoder and a decoder. The keys of the decoder should be known in advance (as this system works as a one-way communication mechanism), for the encoder a new keypair is generated for every encryption using a cryptographically secure pseudo-random number generator based on AES in CTR mode. The shared key resulting from the key agreement is hashed and used to encrypt the plaintext using AES in CBC mode (with the IV deterministically derived from the public key). It also adds a HMAC, with the key derived from the same shared secret as the encryption key.
 
-This module also adds a HMAC, with the key derived from the same the same shared secret.
+=func ecdhes_encrypt($public_key, $plaintext)
 
-=func curveaes_encrypt($public_key, $plaintext)
+This will encrypt C<$plaintext> using C<$public_key>. This is a probabilistic encryption: the result will be different for every invocation.
 
-This will encrypt C<$plaintext> using C<$public_key>. The result will be different for every invocation.
+=func ecdhes_decrypt($private_key, $ciphertext)
 
-=func curveaes_decrypt($private_key, $ciphertext)
+This will decrypt C<$ciphertext> using C<$public_key> and return the plaintext.
 
-This will decrypt C<$ciphertext> using C<$public_key>.
+=func ecdhes_generate_key()
 
-=func curveaes_generate_key()
+This function generates a new random curve25519 keypair and returns it as C<(private_key, $public_key)>
 
 =HEAD1 SEE ALSO
 
@@ -118,8 +118,8 @@ This will decrypt C<$ciphertext> using C<$public_key>.
 
 =item * Crypt::OpenPGP
 
-This module can be used to achieve exactly the same effect in a more standardized way, but it requires much more infrastructure (such as a keychain), many more dependencies and more thinking about various settings.
+This module can be used to achieve exactly the same effect in a more standardized way, but it requires much more infrastructure (such as a keychain), many more dependencies, larger messages and more thinking about various settings.
 
-On the other hand, if your use-case has authenticity-checking needs that can not be solved using a MAC, you may want to use it instead of Crypt::CurveAES.
+On the other hand, if your use-case has authenticity-checking needs that can not be solved using a MAC, you may want to use it instead of Crypt::ECDH_ES.
 
 =back

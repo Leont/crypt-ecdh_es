@@ -14,14 +14,10 @@ our %EXPORT_TAGS = (all => \@EXPORT_OK);
 
 {
 	open my $urandom, '<:raw', '/dev/urandom' or croak 'Couldn\'t open /dev/urandom';
-	read $urandom, my $key, 16 or croak "Couldn't read random key for prng: $!";
-	my $cipher = Crypt::Rijndael->new($key, Crypt::Rijndael::MODE_CTR);
-	read $urandom, my $iv, 16 or croak "Couldn't read random iv for cipher: $!";
-	$cipher->set_iv($iv);
-	close $urandom;
 	sub _csprng {
 		my $count = shift;
-		return $cipher->encrypt("\0" x $count);
+		read $urandom, my $ret, $count or croak "Couldn't read from csprng: $!";
+		return $ret;
 	}
 };
 
@@ -98,7 +94,9 @@ This distribution comes with no warranties whatsoever. While the author believes
 
 =head2 TECHNICAL DETAILS
 
-This modules uses Daniel J. Bernstein's curve25519 (also used by OpenSSH) to perform a Diffie-Hellman key agreement between an encoder and a decoder. The keys of the decoder should be known in advance (as this system works as a one-way communication mechanism), for the encoder a new keypair is generated for every encryption using a cryptographically secure pseudo-random number generator based on AES in CTR mode. The shared key resulting from the key agreement is hashed and used to encrypt the plaintext using AES in CBC mode (with the IV deterministically derived from the public key). It also adds a HMAC, with the key derived from the same shared secret as the encryption key.
+This modules uses Daniel J. Bernstein's curve25519 (also used by OpenSSH) to perform a Diffie-Hellman key agreement between an encoder and a decoder. The keys of the decoder should be known in advance (as this system works as a one-way communication mechanism), for the encoder a new keypair is generated for every encryption using the system's cryptographically secure pseudo-random number generator. The shared key resulting from the key agreement is hashed and used to encrypt the plaintext using AES in CBC mode (with the IV deterministically derived from the public key). It also adds a HMAC, with the key derived from the same shared secret as the encryption key.
+
+All cryptographic components are believed to provide at least 128-bits of security.
 
 =func ecdhes_encrypt($public_key, $plaintext)
 

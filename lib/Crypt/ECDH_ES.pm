@@ -82,7 +82,7 @@ sub ecdhes_generate_key {
 
 =head1 DESCRIPTION
 
-This module uses elliptic curve cryptography in an ephemerical-static configuration combined with the AES cipher to achieve an hybrid cryptographical system. Both the public and the private key are simply 32 byte blobs.
+This module uses elliptic curve cryptography in an ephemerical-static configuration combined with the AES cipher to achieve a hybrid cryptographical system. Both the public and the private key are simply 32 byte blobs.
 
 =head2 Use-cases
 
@@ -90,7 +90,7 @@ You may want to use this module when storing sensive data in such a way that the
 
 =head2 DISCLAIMER
 
-This distribution comes with no warranties whatsoever. While the author believes he's at least somewhat clueful in cryptography, he is not a profesional cryptographer. Users of this distribution are encouraged to read the source of this distribution and its dependencies to make their own, hopefully well-informed, assesment of the security of this cryptosystem.
+This distribution comes with no warranties whatsoever. While the author believes he's at least somewhat clueful in cryptography and it based on a well-understood model (ECIES), he is not a profesional cryptographer. Users of this distribution are encouraged to read the source of this distribution and its dependencies to make their own, hopefully well-informed, assesment of the security of this cryptosystem.
 
 =head2 TECHNICAL DETAILS
 
@@ -110,14 +110,18 @@ This will decrypt C<$ciphertext> using C<$public_key> and return the plaintext.
 
 This function generates a new random curve25519 keypair and returns it as C<(private_key, $public_key)>
 
-=HEAD1 SEE ALSO
+=head1 SEE ALSO
 
 =over 4
 
-=item * Crypt::OpenPGP
+=item * L<Crypt::OpenPGP|Crypt::OpenPGP>
 
 This module can be used to achieve exactly the same effect in a more standardized way, but it requires much more infrastructure (such as a keychain), many more dependencies, larger messages and more thinking about various settings.
 
 On the other hand, if your use-case has authenticity-checking needs that can not be solved using a MAC, you may want to use it instead of Crypt::ECDH_ES.
+
+=item * L<Crypt::Ed25519|Crypt::Ed25519>
+
+This is a public key signing/verification system based on an equivalent curve.
 
 =back

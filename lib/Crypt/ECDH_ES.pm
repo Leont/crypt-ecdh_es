@@ -31,7 +31,7 @@ sub ecdhes_encrypt {
 	my $shared  = curve25519_shared_secret($private, $public_key);
 
 	my ($encrypt_key, $sign_key) = unpack 'A16 A16', sha256($shared);
-	my $iv     = substr sha256($public), 8, 16;
+	my $iv     = substr sha256($public), 0, 16;
 	my $cipher = Crypt::Rijndael->new($encrypt_key, Crypt::Rijndael::MODE_CBC);
 	$cipher->set_iv($iv);
 
@@ -51,7 +51,7 @@ sub ecdhes_decrypt {
 
 	my $shared = curve25519_shared_secret($private_key, $public);
 	my ($encrypt_key, $sign_key) = unpack 'A16 A16', sha256($shared);
-	my $iv     = substr sha256($public), 8, 16;
+	my $iv     = substr sha256($public), 0, 16;
 	croak 'MAC is incorrect' if hmac_sha256($iv . $ciphertext, $sign_key) ne $mac;
 	my $cipher = Crypt::Rijndael->new($encrypt_key, Crypt::Rijndael::MODE_CBC);
 	$cipher->set_iv($iv);

@@ -31,7 +31,7 @@ do {
 	};
 };
 
-my $format = 'C2 a32 a32 a*';
+my $format = 'C/a C/a n/a N/a';
 
 sub ecdhes_encrypt {
 	my ($public_key, $data) = @_;
@@ -50,14 +50,14 @@ sub ecdhes_encrypt {
 
 	my $ciphertext = $cipher->encrypt($data . $padding);
 	my $mac = hmac_sha256($iv . $ciphertext, $sign_key);
-	return pack $format, 1, 0, $public, $mac, $ciphertext;
+	return pack $format, '', $public, $mac, $ciphertext;
 }
 
 sub ecdhes_decrypt {
 	my ($private_key, $packed_data) = @_;
 
-	my ($major, undef, $public, $mac, $ciphertext) = unpack $format, $packed_data;
-	croak 'Unknown format version' if $major != 1;
+	my ($options, $public, $mac, $ciphertext) = unpack $format, $packed_data;
+	croak 'Unknown options' if $options ne '';
 
 	my $shared = curve25519_shared_secret($private_key, $public);
 	my ($encrypt_key, $sign_key) = unpack 'A16 A16', sha256($shared);

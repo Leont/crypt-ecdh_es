@@ -25,10 +25,10 @@ my %formatter_for = (
 my $formatter = $formatter_for{ $opts{format} };
 die "Unknown format $opts{format}" if not $formatter;
 
-my ($private, $public) = ecdhes_generate_key();
-#my ($private, $public) = map { pack "Cx31", $_ } 42, 123;
+my @keys = ecdhes_generate_key();
+#my (@keys) = map { pack "Cx31", $_ } 42, 123;
 
-print $formatter->($private, $public);
+print $formatter->(@keys);
 
 #PODNAME: ecdhes-keygen
 #ABSTRACT: A tool for generating ecdhes keys
@@ -36,12 +36,12 @@ print $formatter->($private, $public);
 =head1 SYNOPSIS
 
  $ ecdhes-keygen --base64
- CBP5t6A9pNczbr5NayeR4qURo12IUtXHy9CwNy/oFkQ=
  TDZkh2OblpB5f68XFryY7GFpR1YDyF9SFLBpdCxrrFE=
+ CBP5t6A9pNczbr5NayeR4qURo12IUtXHy9CwNy/oFkQ=
 
 =head1 DESCRIPTION
 
-This tool generates a new random Curve25519 keypair and outputs it in the designated format. It takes one named option, C<format> that can have the following values.
+This tool generates a new random Curve25519 keypair and outputs it in the designated format (the first being the public and the second being the private key). It takes one named option, C<format> that can have the following values.
 
 =over 4
 

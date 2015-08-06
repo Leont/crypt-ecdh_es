@@ -84,7 +84,7 @@ sub ecdhes_generate_key {
 	}
 	my $secret = curve25519_secret_key($buf);
 	my $public = curve25519_public_key($secret);
-	return ($secret, $public);
+	return ($public, $secret);
 }
 
 1;
@@ -124,7 +124,7 @@ This will decrypt C<$ciphertext> using C<$public_key> and return the plaintext.
 
 =func ecdhes_generate_key()
 
-This function generates a new random curve25519 keypair and returns it as C<(private_key, $public_key)>
+This function generates a new random curve25519 keypair and returns it as C<($public_key, private_key)>
 
 =head1 SEE ALSO
 

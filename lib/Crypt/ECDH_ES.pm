@@ -73,9 +73,15 @@ sub ecdhes_decrypt {
 }
 
 sub ecdhes_generate_key {
-	open my $fh, '<:raw', '/dev/random' or croak "Couldn't open /dev/random: $!";
-	read $fh, my $buf, 32 or croak "Can't read from /dev/random: $!";
-	close $fh;
+	my $buf;
+	if ($^O eq 'MSWin32') {
+		$buf = $csprng->(32);
+	}
+	else {
+		open my $fh, '<:raw', '/dev/random' or croak "Couldn't open /dev/random: $!";
+		read $fh, $buf, 32 or croak "Can't read from /dev/random: $!";
+		close $fh;
+	}
 	my $secret = curve25519_secret_key($buf);
 	my $public = curve25519_public_key($secret);
 	return ($secret, $public);

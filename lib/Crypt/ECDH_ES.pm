@@ -46,7 +46,7 @@ sub ecdhes_encrypt {
 	$cipher->set_iv($iv);
 
 	my $pad_length = 16 - length($data) % 16;
-	my $padding = pack 'C*', ($pad_length) x $pad_length;
+	my $padding = chr($pad_length) x $pad_length;
 
 	my $ciphertext = $cipher->encrypt($data . $padding);
 	my $mac = hmac_sha256($iv . $ciphertext, $sign_key);
@@ -67,8 +67,8 @@ sub ecdhes_decrypt {
 	$cipher->set_iv($iv);
 
 	my $plaintext = $cipher->decrypt($ciphertext);
-	my $padding_length = ord substr $plaintext, -1;
-	substr $plaintext, -$padding_length, $padding_length, '';
+	my $pad_length = ord substr $plaintext, -1;
+	substr($plaintext, -$pad_length, $pad_length, '') eq chr($pad_length) x $pad_length or croak 'Incorrectly padded';
 	return $plaintext;
 }
 

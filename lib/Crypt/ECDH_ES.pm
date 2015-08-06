@@ -12,13 +12,23 @@ use Exporter 5.57 'import';
 our @EXPORT_OK = qw/ecdhes_encrypt ecdhes_decrypt ecdhes_generate_key/;
 our %EXPORT_TAGS = (all => \@EXPORT_OK);
 
-{
-	open my $urandom, '<:raw', '/dev/urandom' or croak 'Couldn\'t open /dev/urandom';
-	sub _csprng {
+my $csprng = ($^O eq 'MSWin32') ?
+do {
+	require Win32::API;
+	my $genrand = Win32::API->new('advapi32', 'INT SystemFunction036(PVOID RandomBuffer, ULONG RandomBufferLength)') or croak "Could not import SystemFunction036: $^E";
+	sub {
 		my $count = shift;
-		read $urandom, my $ret, $count or croak "Couldn't read from csprng: $!";
-		return $ret;
+		$genrand->Call(my $buffer, $count) or croak "Could not read from csprng: $^E";
+		return $buffer;
 	}
+} :
+do {
+	open my $urandom, '<:raw', '/dev/urandom' or croak 'Couldn\'t open /dev/urandom';
+	sub {
+		my $count = shift;
+		read $urandom, my $buffer, $count or croak "Couldn't read from csprng: $!";
+		return $buffer;
+	};
 };
 
 my $format = 'C2 a32 a32 a*';
@@ -26,7 +36,7 @@ my $format = 'C2 a32 a32 a*';
 sub ecdhes_encrypt {
 	my ($public_key, $data) = @_;
 
-	my $private = curve25519_secret_key(_csprng(32));
+	my $private = curve25519_secret_key($csprng->(32));
 	my $public  = curve25519_public_key($private);
 	my $shared  = curve25519_shared_secret($private, $public_key);
 

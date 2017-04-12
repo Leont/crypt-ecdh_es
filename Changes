@@ -1,6 +1,8 @@
 Revision history for Crypt-ECDH_ES
 
 {{$NEXT}}
+
+0.002     2017-04-12 23:51:48+02:00 Europe/Amsterdam
           - Remove Win32::API from dependency list
 
 0.001     2015-08-07 02:36:07+02:00 Europe/Amsterdam

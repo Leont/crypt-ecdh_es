@@ -1,6 +1,7 @@
 Revision history for Crypt-ECDH_ES
 
 {{$NEXT}}
+          - Don't use space padded strings in pack
 
 0.002     2017-04-12 23:51:48+02:00 Europe/Amsterdam
           - Remove Win32::API from dependency list

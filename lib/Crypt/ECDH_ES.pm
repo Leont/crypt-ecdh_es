@@ -6,7 +6,7 @@ use warnings;
 use Carp;
 use Crypt::Curve25519;
 use Crypt::URandom qw/urandom/;
-use Crypt::Rijndael;
+use Crypt::Rijndael 1.16;
 use Digest::SHA qw/sha256 hmac_sha256/;
 
 use Exporter 5.57 'import';
@@ -25,12 +25,11 @@ sub ecdhes_encrypt {
 	my ($encrypt_key, $sign_key) = unpack 'a16 a16', sha256($shared);
 	my $iv     = substr sha256($public), 0, 16;
 	my $cipher = Crypt::Rijndael->new($encrypt_key, Crypt::Rijndael::MODE_CBC);
-	$cipher->set_iv($iv);
 
 	my $pad_length = 16 - length($data) % 16;
 	my $padding = chr($pad_length) x $pad_length;
 
-	my $ciphertext = $cipher->encrypt($data . $padding);
+	my $ciphertext = $cipher->encrypt($data . $padding, $iv);
 	my $mac = hmac_sha256($iv . $ciphertext, $sign_key);
 	return pack $format, '', $public, $mac, $ciphertext;
 }
@@ -46,9 +45,8 @@ sub ecdhes_decrypt {
 	my $iv     = substr sha256($public), 0, 16;
 	croak 'MAC is incorrect' if hmac_sha256($iv . $ciphertext, $sign_key) ne $mac;
 	my $cipher = Crypt::Rijndael->new($encrypt_key, Crypt::Rijndael::MODE_CBC);
-	$cipher->set_iv($iv);
 
-	my $plaintext = $cipher->decrypt($ciphertext);
+	my $plaintext = $cipher->decrypt($ciphertext, $iv);
 	my $pad_length = ord substr $plaintext, -1;
 	substr($plaintext, -$pad_length, $pad_length, '') eq chr($pad_length) x $pad_length or croak 'Incorrectly padded';
 	return $plaintext;

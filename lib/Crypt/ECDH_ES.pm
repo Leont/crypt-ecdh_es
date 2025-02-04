@@ -116,8 +116,8 @@ sub ecdhes_generate_key {
 
 =head1 SYNOPSIS
 
- my $ciphertext = ecdhes_encrypt($data, $key);
- my $plaintext = ecdhes_decrypt($ciphertext, $key);
+ my $ciphertext = ecdhes_encrypt($public_key, $data);
+ my $plaintext = ecdhes_decrypt($private_key, $ciphertext);
 
 =head1 DESCRIPTION
 
@@ -127,45 +127,57 @@ This module uses elliptic curve cryptography in an ephemerical-static configurat
 
 You may want to use this module when storing sensive data in such a way that the encoding side can't read it afterwards, for example a website storing credit card data in a database that will be used by a separate back-end financial processor. When used in this way, a leak of the database and keys given to the website will not leak those credit card numbers.
 
-=head2 DISCLAIMER
-
-This distribution comes with no warranties whatsoever. While the author believes he's at least somewhat clueful in cryptography and it based on a well-understood model (ECIES), he is not a profesional cryptographer. Users of this distribution are encouraged to read the source of this distribution and its dependencies to make their own, hopefully well-informed, assesment of the security of this cryptosystem.
-
-=head2 TECHNICAL DETAILS
+=head2 Technical details
 
 This modules uses Daniel J. Bernstein's curve25519 (also used by OpenSSH) to perform a Diffie-Hellman key agreement between an encoder and a decoder. The keys of the decoder should be known in advance (as this system works as a one-way communication mechanism), for the encoder a new keypair is generated for every encryption using the system's cryptographically secure pseudo-random number generator. The shared key resulting from the key agreement is hashed and used to encrypt the plaintext using AES in CBC mode (with the IV deterministically derived from the public key). It also adds a HMAC, with the key derived from the same shared secret as the encryption key.
 
 All cryptographic components are believed to provide at least 128-bits of security.
 
-=func ecdhes_encrypt($public_key, $plaintext)
+=head2 Variants
+
+There are two variants of this system; both will encrypt the payload, but only one will authenticate the sender.
+
+=func ecdhes_encrypt
+
+ my $ciphertext = ecdhes_encrypt($public_key, $plaintext)
 
 This will encrypt C<$plaintext> using C<$public_key>. This is a non-deterministic encryption: the result will be different for every invocation.
 
-=func ecdhes_decrypt($private_key, $ciphertext)
+=func ecdhes_decrypt
+
+ my $plaintext = ecdhes_decrypt($private_key, $ciphertext)
 
 This will decrypt C<$ciphertext> (as encrypted using C<ecdhes_encrypt>) using C<$private_key> and return the plaintext.
 
-=func ecdhes_encrypt_authenticated($public_key, $private_key, $plaintext)
+=func ecdhes_encrypt_authenticated
 
-This will encrypt C<$plaintext> using C<$public_key> (of the receiver) and C<$private_key> (of the sender). This is a non-deterministic encryption: the result will be different for every invocation.
+ my $ciphertext = ecdhes_encrypt_authenticated($receiver_public_key, $sender_private_key, $plaintext)
 
-=func ecdhes_decrypt_authenticated($private_key, $ciphertext)
+This will encrypt C<$plaintext> using C<$receiver_public_key> and C<$sender_private_key>. This is a non-deterministic encryption: the result will be different for every invocation.
 
-This will decrypt C<$ciphertext> (as encrypted using C<ecdhes_encrypt_authenticated>) using C<$private_key> and return the plaintext and the public of the sender
+=func ecdhes_decrypt_authenticated
 
-=func ecdhes_generate_key()
+ my ($plaintext, $sender_public_key) = ecdhes_decrypt_authenticated($receiver_private_key, $ciphertext)
 
-This function generates a new random curve25519 keypair and returns it as C<($public_key, private_key)>
+This will decrypt C<$ciphertext> (as encrypted using C<ecdhes_encrypt_authenticated>) using C<$receiver_private_key> and return the plaintext and the public key of the sender.
+
+=func ecdhes_generate_key
+
+ my ($public_key, $private_key) = ecdhes_generate_key()
+
+This function generates a new random curve25519 keypair.
 
 =head1 SEE ALSO
 
 =over 4
 
+=item * L<ecdh_es|https://github.com/tomk3003/ecdh_es>
+
+A compatible decoder written in C.
+
 =item * L<Crypt::OpenPGP|Crypt::OpenPGP>
 
 This module can be used to achieve exactly the same effect in a more standardized way, but it requires much more infrastructure (such as a keychain), many more dependencies, larger messages and more thinking about various settings.
-
-On the other hand, if your use-case has authenticity-checking needs that can not be solved using a MAC, you may want to use it instead of Crypt::ECDH_ES.
 
 =item * L<Crypt::Ed25519|Crypt::Ed25519>
 

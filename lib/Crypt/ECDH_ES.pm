@@ -5,7 +5,7 @@ use warnings;
 
 use Carp;
 use Crypt::Curve25519;
-use Crypt::URandom qw/urandom/;
+use Crypt::SysRandom qw/random_bytes/;
 use Crypt::Rijndael 1.16;
 use Digest::SHA qw/sha256 hmac_sha256/;
 
@@ -18,7 +18,7 @@ my $format_unauthenticated = 'C/a C/a n/a N/a';
 sub ecdhes_encrypt {
 	my ($public_key, $data) = @_;
 
-	my $private = curve25519_secret_key(urandom(32));
+	my $private = curve25519_secret_key(random_bytes(32));
 	my $public  = curve25519_public_key($private);
 	my $shared  = curve25519_shared_secret($private, $public_key);
 
@@ -58,7 +58,7 @@ sub ecdhes_encrypt_authenticated {
 	my ($public_key_other, $private_key_self, $data) = @_;
 
 	my $public_key_self = curve25519_public_key($private_key_self);
-	my $private_ephemeral = curve25519_secret_key(urandom(32));
+	my $private_ephemeral = curve25519_secret_key(random_bytes(32));
 	my $ephemeral_public  = curve25519_public_key($private_ephemeral);
 	my $primary_shared  = curve25519_shared_secret($private_ephemeral, $public_key_other);
 
@@ -104,7 +104,7 @@ sub ecdhes_decrypt_authenticated {
 }
 
 sub ecdhes_generate_key {
-	my $buf = urandom(32);
+	my $buf = random_bytes(32);
 	my $secret = curve25519_secret_key($buf);
 	my $public = curve25519_public_key($secret);
 	return ($public, $secret);

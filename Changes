@@ -1,6 +1,7 @@
 Revision history for Crypt-ECDH_ES
 
 {{$NEXT}}
+          - Switch to Crypt::SysRandom as random source
 
 0.005     2024-02-05 01:00:14+01:00 Europe/Brussels
           - Add support for authenticated encryption
